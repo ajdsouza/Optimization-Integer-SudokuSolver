@@ -1,0 +1,114 @@
+!@encoding CP1252
+model sudoku
+uses "mmxprs"; !gain access to the Xpress-Optimizer solver
+
+! sudoku dimension
+m := 9    
+
+!sample declarations section
+declarations
+	! range along a single dimension of sudoku
+	sRange = 1..m
+	
+	! the decision variables for sudoku values
+	! we see the sudoku challenge as a cube where 2 dimensions are positions
+	! the third dimension is the value , with 1 in the value cell and 0 otherwise
+	x: array(sRange, sRange, sRange) of mpvar
+	
+	! linear constraints
+	sudokConstr : array(sRange,sRange,1..3+m) of linctr
+	
+	! the objective
+	obj:linctr
+end-declarations
+
+! a placeholder objective
+obj := 0
+
+!initializations
+x(1,1,8) = 1  !x(1,1) = 8
+x(2,3,3) = 1  !x(2,3) = 3
+x(2,4,6) = 1  !x(2,4) = 6
+x(3,2,7) = 1  !x(3,2) = 7
+x(3,5,9) = 1  !x(3,5) = 9
+x(3,7,2) = 1  !x(3,7) = 2
+x(4,2,5) = 1  !x(4,2) = 5
+x(4,6,7) = 1  !x(4,6) = 7
+x(5,5,4) = 1  !x(5,5) = 4
+x(5,6,5) = 1  !x(5,6) = 5
+x(5,7,7) = 1  !x(5,7) = 7
+x(6,4,1) = 1  !x(6,4) = 1
+x(6,8,3) = 1  !x(6,8) = 3
+x(7,3,1) = 1  !x(7,3) = 1
+x(7,8,6) = 1  !x(7,8) = 6
+x(7,9,8) = 1  !x(7,9) = 8
+x(8,3,8) = 1  !x(8,3) = 8
+x(8,4,5) = 1  !x(8,4) = 5
+x(8,8,1) = 1  !x(8,8) = 1
+x(9,2,9) = 1  !x(9,2) = 9
+x(9,7,4) = 1  !x(9,7) = 4
+ 
+
+! define the constraints 
+! each stack of k cells at holding the value the ij cell 
+! of the matrix 
+! can have 1 in just one cell and 0 otherwise
+forall (i in sRange, j in sRange) do
+	sudokConstr(i,j,1) :=  sum ( k in sRange ) x(i,j,k) = 1
+end-do
+
+
+! each row must have all of 1..9 with no repeat 
+forall (i in sRange, k in sRange) do
+	sudokConstr(i,k,2) :=  sum ( j in sRange ) x(i,j,k) = 1
+end-do
+
+
+! each column of the matrix must have all of 1..9 with 
+! no repeat
+forall (j in sRange, k in sRange) do
+	sudokConstr(j,k,3) :=  sum ( i in sRange ) x(i,j,k) = 1
+end-do
+
+
+! each of the 9 3x3 sub matrices should have all of 1..9
+!  with no repeat
+forall (Ci in [0,3,6], Cj in [0,3,6]) do
+	forall (k in sRange) do
+		sudokConstr(Ci+1,Cj+1,3+k) :=  sum (i in 1..3, j in 1..3 ) x(Ci+i,Cj+j,k) = 1
+	end-do
+end-do
+
+! the variables can be 0 or 1
+forall (i in sRange, j in sRange, k in sRange) do
+	x(i,j,k) is_binary
+end-do
+
+writeln("Begin running model")
+minimize(obj)
+writeln("End running model")
+
+writeln("\nSudoku Table")
+writeln("------------")
+
+! Print the Sudoku table
+forall ( i in sRange) do
+	forall ( j in sRange) do
+		forall ( k in sRange ) do
+			if (getsol(x(i,j,k)) = 1) then
+				write(k," | ")
+			end-if
+		end-do
+	end-do
+	(!
+	writeln("")
+	forall ( jp in sRange) do
+		write("__")
+	end-do
+	!)
+	writeln("")
+	
+end-do
+
+	
+end-model
